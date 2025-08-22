@@ -53,8 +53,13 @@ class SaveModel:
         with open(path, "r", encoding="utf-8") as f:
             self.data = json.load(f)
         self.npcs = self.data.get('npcs', [])
-        if not isinstance(self.npcs, list):
+        if isinstance(self.npcs, list):
+            # filter out dead characters
+            self.npcs = [npc for npc in self.npcs if not self.is_dead(npc)]
+        else:
             self.npcs = []
+        # ensure backing data matches filtered list
+        self.data['npcs'] = self.npcs
         return True
 
     def save(self, out_path=None, make_backup=True):
@@ -92,7 +97,7 @@ class SaveModel:
         If only_team is None -> iterate all; else only team==only_team.
         """
         for idx, npc in enumerate(self.npcs):
-            if not isinstance(npc, dict):
+            if not isinstance(npc, dict) or self.is_dead(npc):
                 continue
             if only_team is None or npc.get('team') == only_team:
                 yield idx, npc
@@ -109,6 +114,28 @@ class SaveModel:
             'skillPoint': npc.get('skillPoint'),
             'livingSkillPoint': npc.get('livingSkillPoint'),
         }
+
+    @staticmethod
+    def is_dead(npc):
+        """Return True if the given NPC appears to be dead."""
+        if not isinstance(npc, dict):
+            return False
+        if npc.get('isDead') or npc.get('dead'):
+            return True
+        death_date = npc.get('deathDate')
+        if isinstance(death_date, (int, float)) and death_date > 0:
+            return True
+        state = npc.get('state')
+        if isinstance(state, str) and state.lower() == 'dead':
+            return True
+        gl_state = npc.get('gladiatorState')
+        if isinstance(gl_state, (int, float)) and gl_state >= 5:
+            return True
+        for key in ('hp', 'HP', 'currentHp', 'curHp', 'currentHP'):
+            hp = npc.get(key)
+            if isinstance(hp, (int, float)) and hp <= 0:
+                return True
+        return False
 
 class App(tk.Tk):
     def __init__(self):
