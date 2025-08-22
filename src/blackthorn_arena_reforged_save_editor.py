@@ -28,6 +28,8 @@ import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
+from ui_style import init_style, apply_palette as style_apply_palette
+
 APP_TITLE = "Blackthorn Arena: Reforged - Save Editor (JSON)"
 DEFAULT_FILENAME = "sav.dat"
 
@@ -115,6 +117,12 @@ class App(tk.Tk):
         self.geometry("1100x640")
         self.minsize(960, 560)
 
+        # style / theme
+        self.style = init_style(self)
+        self.theme_var = tk.StringVar(value="Light")
+        self.tag_colors = {}
+        self.apply_palette(self.theme_var.get())
+
         self.model = SaveModel()
 
         # UI state
@@ -152,6 +160,13 @@ class App(tk.Tk):
         filem.add_separator()
         filem.add_command(label="Quit", command=self.on_quit)
         mbar.add_cascade(label="File", menu=filem)
+
+        viewm = tk.Menu(mbar, tearoff=False)
+        viewm.add_radiobutton(label="Light Theme", variable=self.theme_var,
+                               value="Light", command=self.on_theme_change)
+        viewm.add_radiobutton(label="Dark Theme", variable=self.theme_var,
+                               value="Dark", command=self.on_theme_change)
+        mbar.add_cascade(label="View", menu=viewm)
 
         helpm = tk.Menu(mbar, tearoff=False)
         helpm.add_command(label="About", command=self.on_about)
@@ -288,7 +303,7 @@ class App(tk.Tk):
         search = self.search_var.get().strip().lower()
         minlvl = safe_int(self.filter_min_level_var.get(), 0)
 
-        for idx, npc in self.model.iter_roster(only_team=only_team):
+        for n, (idx, npc) in enumerate(self.model.iter_roster(only_team=only_team)):
             s = self.model.npc_summary(npc)
             name = str(s.get('unitname') or "")
             lvl = s.get('level') or 0
@@ -301,7 +316,15 @@ class App(tk.Tk):
                 name, lvl, s.get('potentialPoint'), s.get('skillPoint'),
                 s.get('livingSkillPoint')
             )
-            self.tree.insert("", "end", iid=str(idx), values=values)
+            tag = "even" if n % 2 == 0 else "odd"
+            tags = (tag,)
+            if search and search in name.lower():
+                tags = tags + ("match",)
+            self.tree.insert("", "end", iid=str(idx), values=values, tags=tags)
+
+        self.tree.tag_configure("even", background=self.tag_colors.get("even"))
+        self.tree.tag_configure("odd", background=self.tag_colors.get("odd"))
+        self.tree.tag_configure("match", background=self.tag_colors.get("match"))
 
     def on_update_meta(self):
         if not self.model.data:
@@ -356,6 +379,14 @@ class App(tk.Tk):
 
         self.refresh_table()
         messagebox.showinfo(APP_TITLE, f"Applied changes to {count} gladiator(s). Remember to Save!")
+
+    # ---------- Theme ----------
+    def on_theme_change(self):
+        self.apply_palette(self.theme_var.get())
+        self.refresh_table()
+
+    def apply_palette(self, kind):
+        self.tag_colors = style_apply_palette(self, self.style, kind)
 
 def main():
     app = App()
