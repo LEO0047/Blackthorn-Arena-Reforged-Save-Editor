@@ -23,6 +23,8 @@ import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
+from ui_style import init_style, apply_palette as style_apply_palette
+
 APP_TITLE = "黑荊棘角鬥場：重鑄版 存檔修改器（JSON）"
 DEFAULT_FILENAME = "sav.dat"
 
@@ -32,16 +34,6 @@ def safe_int(v, default=None):
         return int(v)
     except Exception:
         return default
-
-def prefers_msjh():
-    # 嘗試使用微軟正黑體（Windows 常見），否則用系統預設
-    try:
-        import tkinter.font as tkfont
-        fams = set(tkfont.families())
-        return "Microsoft JhengHei UI" if "Microsoft JhengHei UI" in fams else (
-               "Microsoft JhengHei" if "Microsoft JhengHei" in fams else None)
-    except Exception:
-        return None
 
 # ---------- 資料模型 ----------
 class SaveModel:
@@ -127,30 +119,11 @@ class App(tk.Tk):
         except Exception:
             pass
 
-        # 風格
-        self.style = ttk.Style()
-        try:
-            self.style.theme_use("clam")
-        except Exception:
-            pass
-
-        # 字體
-        fn = prefers_msjh()
-        base_font = (fn or "TkDefaultFont", 11)
-        header_font = (fn or "TkDefaultFont", 12, "bold")
-        # 樣式細節
-        self.style.configure("Treeview", font=base_font, rowheight=28)
-        self.style.configure("Treeview.Heading", font=header_font)
-        self.style.map("Treeview", background=[("selected", "#0e639c")], foreground=[("selected", "white")])
-        self.style.configure("TButton", font=base_font, padding=6)
-        self.style.configure("TLabel", font=base_font)
-        self.style.configure("TEntry", font=base_font)
-        self.style.configure("TCheckbutton", font=base_font)
-        self.style.configure("TRadiobutton", font=base_font)
-
-        # 主題（亮/暗）
+        # 風格與主題
+        self.style = init_style(self)
         self.theme_var = tk.StringVar(value="亮色")
-        self.apply_palette("亮色")
+        self.tag_colors = {}
+        self.apply_palette(self.theme_var.get())
 
         # 內部狀態
         self.model = SaveModel()
@@ -192,30 +165,7 @@ class App(tk.Tk):
 
     # --------- 主題配色 ---------
     def apply_palette(self, kind):
-        if kind == "暗色":
-            bg = "#1e1e1e"
-            fg = "#e6e6e6"
-            panel = "#252526"
-            accent = "#0e639c"
-            alt = "#2a2a2a"
-        else:
-            bg = "#fafafa"
-            fg = "#202020"
-            panel = "#ffffff"
-            accent = "#0e639c"
-            alt = "#f0f3f8"
-
-        self.configure(bg=bg)
-        self.style.configure(".", background=bg, foreground=fg)
-        self.style.configure("Card.TFrame", background=panel, relief="flat")
-        self.style.configure("CardTitle.TLabel", background=panel, foreground=fg, font=("TkDefaultFont", 12, "bold"))
-        self.style.configure("Hint.TLabel", background=panel, foreground="#666666")
-        # Tree zebra
-        self.tag_colors = {
-            "even": alt,
-            "odd": panel,
-            "match": "#fff2ab" if kind != "暗色" else "#4d3f00"
-        }
+        self.tag_colors = style_apply_palette(self, self.style, kind)
 
     # ---------- UI ----------
     def create_menu(self):
