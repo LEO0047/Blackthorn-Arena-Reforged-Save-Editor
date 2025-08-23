@@ -23,7 +23,7 @@ import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-from ui_style import init_style, apply_palette as style_apply_palette
+from ui_style import init_style, apply_palette as style_apply_palette, card as style_card
 
 APP_TITLE = "黑荊棘角鬥場：重鑄版 存檔修改器（JSON）"
 DEFAULT_FILENAME = "sav.dat"
@@ -216,27 +216,36 @@ class App(tk.Tk):
         mbar.add_cascade(label="說明", menu=helpm)
         self.config(menu=mbar)
 
-    def card(self, parent, title=None):
-        frame = ttk.Frame(parent, style="Card.TFrame", padding=(10,10,10,10))
-        frame.pack(fill="x", pady=(0,8))
-        if title:
-            ttk.Label(frame, text=title, style="CardTitle.TLabel").pack(anchor="w", pady=(0,6))
-        return frame
-
     def create_widgets(self):
         root = ttk.Frame(self, padding=10)
         root.pack(fill="both", expand=True)
 
-        # 外觀/主題列
-        topbar = self.card(root)
+        nb = ttk.Notebook(root)
+        nb.pack(fill="both", expand=True)
+
+        # -------- 通用 --------
+        tab_general = ttk.Frame(nb)
+        nb.add(tab_general, text="通用")
+
+        topbar = style_card(tab_general)
         ttk.Label(topbar, text="外觀：", width=6).pack(side="left")
         ttk.OptionMenu(topbar, self.theme_var, self.theme_var.get(), "亮色", "暗色", command=self.on_theme_change).pack(side="left", padx=(0,10))
         ttk.Label(topbar, text="（可在「視圖」選單調整介面縮放）", style="Hint.TLabel").pack(side="left")
 
-        # 全局屬性 + 篩選
-        meta = self.card(root, "全局屬性 / 篩選")
-        # 行1：篩選控制
-        row1 = ttk.Frame(meta)
+        meta = style_card(tab_general, "全局屬性")
+        ttk.Label(meta, text="金錢 (wealth)：").pack(side="left")
+        ttk.Entry(meta, textvariable=self.gold_var, width=10).pack(side="left", padx=(4,12))
+        ttk.Label(meta, text="聲望 (reputation)：").pack(side="left")
+        ttk.Entry(meta, textvariable=self.rep_var, width=10).pack(side="left", padx=(4,12))
+        ttk.Button(meta, text="更新全局屬性", command=self.on_update_meta).pack(side="left")
+        ttk.Label(meta, text="提示：修改後記得到【檔案→儲存】寫回存檔（會自動備份）", style="Hint.TLabel").pack(anchor="w", pady=(6,0))
+
+        # -------- 角鬥士 --------
+        tab_glad = ttk.Frame(nb)
+        nb.add(tab_glad, text="角鬥士")
+
+        filt = style_card(tab_glad, "篩選")
+        row1 = ttk.Frame(filt)
         row1.pack(fill="x", pady=4)
         ttk.Checkbutton(row1, text="只顯示玩家隊伍 (team=0)", variable=self.show_only_player_var, command=self.refresh_table).pack(side="left")
         ttk.Checkbutton(row1, text="只顯示名字含底線 _", variable=self.only_underscore_var, command=self.refresh_table).pack(side="left", padx=(10,0))
@@ -246,18 +255,7 @@ class App(tk.Tk):
         ttk.Entry(row1, textvariable=self.filter_min_level_var, width=6).pack(side="left", padx=(4,6))
         ttk.Button(row1, text="套用篩選", command=self.refresh_table).pack(side="left", padx=(8,0))
 
-        # 行2：全局屬性
-        row2 = ttk.Frame(meta)
-        row2.pack(fill="x", pady=4)
-        ttk.Label(row2, text="金錢 (wealth)：").pack(side="left")
-        ttk.Entry(row2, textvariable=self.gold_var, width=10).pack(side="left", padx=(4,12))
-        ttk.Label(row2, text="聲望 (reputation)：").pack(side="left")
-        ttk.Entry(row2, textvariable=self.rep_var, width=10).pack(side="left", padx=(4,12))
-        ttk.Button(row2, text="更新全局屬性", command=self.on_update_meta).pack(side="left")
-        ttk.Label(meta, text="提示：修改後記得到【檔案→儲存】寫回存檔（會自動備份）", style="Hint.TLabel").pack(anchor="w", pady=(6,0))
-
-        # 表格
-        table_card = self.card(root, "角鬥士清單")
+        table_card = style_card(tab_glad, "角鬥士清單")
         table_frame = ttk.Frame(table_card)
         table_frame.pack(fill="both", expand=True)
 
@@ -278,8 +276,7 @@ class App(tk.Tk):
         self.tree.configure(yscroll=yscroll.set)
         yscroll.pack(side="right", fill="y")
 
-        # 編輯面板
-        editor = self.card(root, "批次編輯（套用至選取的角色）")
+        editor = style_card(tab_glad, "批次編輯（套用至選取的角色）")
         grid = ttk.Frame(editor)
         grid.pack(fill="x", padx=2, pady=2)
 
@@ -300,6 +297,19 @@ class App(tk.Tk):
         ttk.Button(grid, text="套用到選取", command=self.on_apply_selected).grid(row=r, column=3, sticky="w", padx=10, pady=(8,0))
 
         ttk.Label(editor, text="建議：先用「加值」小幅調整（+5～+10），避免過度破壞平衡。", style="Hint.TLabel").pack(anchor="w", pady=(6,0))
+
+        # -------- 其他分頁 --------
+        tab_traits = ttk.Frame(nb)
+        nb.add(tab_traits, text="特性")
+        style_card(tab_traits, "尚未實作")
+
+        tab_items = ttk.Frame(nb)
+        nb.add(tab_items, text="物品")
+        style_card(tab_items, "尚未實作")
+
+        tab_arena = ttk.Frame(nb)
+        nb.add(tab_arena, text="競技場")
+        style_card(tab_arena, "尚未實作")
 
     # ---------- 事件 ----------
     def on_theme_change(self, *_):
