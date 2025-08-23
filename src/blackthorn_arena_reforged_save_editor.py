@@ -28,7 +28,7 @@ import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-from ui_style import init_style, apply_palette as style_apply_palette
+from ui_style import init_style, apply_palette as style_apply_palette, card as style_card
 
 APP_TITLE = "Blackthorn Arena: Reforged - Save Editor (JSON)"
 DEFAULT_FILENAME = "sav.dat"
@@ -205,30 +205,34 @@ class App(tk.Tk):
         root = ttk.Frame(self, padding=8)
         root.pack(fill="both", expand=True)
 
-        # Top meta editor (gold/rep + toggles)
-        meta = ttk.LabelFrame(root, text="Meta")
-        meta.pack(fill="x", pady=(0,8))
+        nb = ttk.Notebook(root)
+        nb.pack(fill="both", expand=True)
 
-        ttk.Checkbutton(meta, text="Show ALL NPCs (not just team 0)",
-                        variable=self.show_all_var, command=self.refresh_table).pack(side="left", padx=(8,8))
-
-        ttk.Label(meta, text="Search name:").pack(side="left")
-        ttk.Entry(meta, textvariable=self.search_var, width=20).pack(side="left", padx=(4,10))
-        ttk.Label(meta, text="Min level:").pack(side="left")
-        ttk.Entry(meta, textvariable=self.filter_min_level_var, width=6).pack(side="left", padx=(4,10))
-        ttk.Button(meta, text="Apply Filters", command=self.refresh_table).pack(side="left", padx=(4,12))
-
-        sep = ttk.Separator(meta, orient="vertical")
-        sep.pack(side="left", fill="y", padx=8, pady=4)
-
+        # ----- General Tab -----
+        tab_gen = ttk.Frame(nb)
+        nb.add(tab_gen, text="General")
+        meta = style_card(tab_gen, "Meta")
         ttk.Label(meta, text="Wealth (Gold):").pack(side="left")
         ttk.Entry(meta, textvariable=self.gold_var, width=8).pack(side="left", padx=(4,10))
         ttk.Label(meta, text="Reputation:").pack(side="left")
         ttk.Entry(meta, textvariable=self.rep_var, width=8).pack(side="left", padx=(4,10))
         ttk.Button(meta, text="Update Meta", command=self.on_update_meta).pack(side="left", padx=(4,8))
 
-        # Table
-        table_frame = ttk.Frame(root)
+        # ----- Gladiators Tab -----
+        tab_glad = ttk.Frame(nb)
+        nb.add(tab_glad, text="Gladiators")
+
+        filters = style_card(tab_glad, "Filters")
+        ttk.Checkbutton(filters, text="Show ALL NPCs (not just team 0)",
+                        variable=self.show_all_var, command=self.refresh_table).pack(side="left", padx=(8,8))
+        ttk.Label(filters, text="Search name:").pack(side="left")
+        ttk.Entry(filters, textvariable=self.search_var, width=20).pack(side="left", padx=(4,10))
+        ttk.Label(filters, text="Min level:").pack(side="left")
+        ttk.Entry(filters, textvariable=self.filter_min_level_var, width=6).pack(side="left", padx=(4,10))
+        ttk.Button(filters, text="Apply Filters", command=self.refresh_table).pack(side="left", padx=(4,12))
+
+        table_card = style_card(tab_glad, "Roster")
+        table_frame = ttk.Frame(table_card)
         table_frame.pack(fill="both", expand=True)
 
         columns = ("idx","id","unitId","team","unitname","level","potentialPoint","skillPoint","livingSkillPoint")
@@ -242,10 +246,7 @@ class App(tk.Tk):
         self.tree.configure(yscroll=yscroll.set)
         yscroll.pack(side="right", fill="y")
 
-        # Editor panel
-        editor = ttk.LabelFrame(root, text="Edit Selected Gladiators")
-        editor.pack(fill="x", pady=(8,0))
-
+        editor = style_card(tab_glad, "Edit Selected Gladiators")
         grid = ttk.Frame(editor)
         grid.pack(fill="x", padx=8, pady=4)
 
@@ -266,6 +267,19 @@ class App(tk.Tk):
         ttk.Button(grid, text="Apply to Selected", command=self.on_apply_selected).grid(row=r, column=3, sticky="w", padx=8, pady=(6,0))
 
         ttk.Label(editor, text="Hints: Use modest numbers first (e.g., +5 to +10 points) to avoid breaking balance. Back up your save!").pack(anchor="w", padx=8, pady=(2,8))
+
+        # ----- Placeholder Tabs -----
+        tab_traits = ttk.Frame(nb)
+        nb.add(tab_traits, text="Traits")
+        style_card(tab_traits, "Coming soon")
+
+        tab_items = ttk.Frame(nb)
+        nb.add(tab_items, text="Items")
+        style_card(tab_items, "Coming soon")
+
+        tab_arena = ttk.Frame(nb)
+        nb.add(tab_arena, text="Arena")
+        style_card(tab_arena, "Coming soon")
 
     # ---------- Menu actions ----------
     def on_open(self):
