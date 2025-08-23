@@ -58,6 +58,12 @@ def apply_palette(root, style, kind):
     style.configure("Card.TFrame", background=panel, relief="flat")
     style.configure("CardTitle.TLabel", background=panel, foreground=fg, font=("TkDefaultFont", 12, "bold"))
     style.configure("Hint.TLabel", background=panel, foreground="#666666")
+    # Notebook / tabs
+    style.configure("TNotebook", background=bg, borderwidth=0)
+    style.configure("TNotebook.Tab", background=alt, foreground=fg, padding=(10, 6))
+    style.map("TNotebook.Tab",
+               background=[("selected", panel), ("!selected", alt)],
+               foreground=[("selected", fg), ("!selected", fg)])
     # Labelframe styling for apps that use it
     style.configure("TLabelframe", background=panel, foreground=fg)
     style.configure("TLabelframe.Label", background=panel, foreground=fg, font=("TkDefaultFont", 12, "bold"))
@@ -68,3 +74,14 @@ def apply_palette(root, style, kind):
         "match": "#fff2ab" if k not in ("dark", "\u6697\u8272") else "#4d3f00",
     }
     return tag_colors
+
+
+def card(parent, title=None, **pack):
+    """Create a styled card frame with optional title and standard padding."""
+    frame = ttk.Frame(parent, style="Card.TFrame", padding=(10, 10, 10, 10))
+    if not pack:
+        pack = {"fill": "x", "pady": (0, 8)}
+    frame.pack(**pack)
+    if title:
+        ttk.Label(frame, text=title, style="CardTitle.TLabel").pack(anchor="w", pady=(0, 6))
+    return frame
