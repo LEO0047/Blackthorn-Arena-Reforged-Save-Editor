@@ -10,7 +10,9 @@ Usage:
 Features:
 - Load JSON save (sav.dat) and parse gladiators & meta (wealth, reputation)
 - Show roster (default: team == 0, likely player's team) with filter/search
-- Edit selected gladiators' level, potentialPoint, skillPoint, livingSkillPoint
+ - Edit selected gladiators' level, potentialPoint, skillPoint, livingSkillPoint,
+   and base attributes (BSstrength, BSendurance, BSagility, BSprecision,
+   BSintelligence, BSwillpower)
 - Bulk-add or set values
 - Edit top-level wealth (gold) & reputation
 - Backup original file on save
@@ -164,6 +166,12 @@ class App(tk.Tk):
         self.potential_var = tk.StringVar(value="")
         self.skill_var = tk.StringVar(value="")
         self.living_skill_var = tk.StringVar(value="")
+        self.strength_var = tk.StringVar(value="")
+        self.endurance_var = tk.StringVar(value="")
+        self.agility_var = tk.StringVar(value="")
+        self.precision_var = tk.StringVar(value="")
+        self.intelligence_var = tk.StringVar(value="")
+        self.willpower_var = tk.StringVar(value="")
 
         self.bulk_mode_var = tk.StringVar(value="add")  # "add" or "set"
 
@@ -259,6 +267,22 @@ class App(tk.Tk):
         ttk.Entry(grid, textvariable=self.skill_var, width=8).grid(row=r, column=5, sticky="w", padx=4)
         ttk.Label(grid, text="Living Skill Points:").grid(row=r, column=6, sticky="w")
         ttk.Entry(grid, textvariable=self.living_skill_var, width=8).grid(row=r, column=7, sticky="w", padx=4)
+
+        r+=1
+        ttk.Label(grid, text="Strength:").grid(row=r, column=0, sticky="w", pady=(6,0))
+        ttk.Entry(grid, textvariable=self.strength_var, width=8).grid(row=r, column=1, sticky="w", padx=4, pady=(6,0))
+        ttk.Label(grid, text="Endurance:").grid(row=r, column=2, sticky="w", pady=(6,0))
+        ttk.Entry(grid, textvariable=self.endurance_var, width=8).grid(row=r, column=3, sticky="w", padx=4, pady=(6,0))
+        ttk.Label(grid, text="Agility:").grid(row=r, column=4, sticky="w", pady=(6,0))
+        ttk.Entry(grid, textvariable=self.agility_var, width=8).grid(row=r, column=5, sticky="w", padx=4, pady=(6,0))
+        ttk.Label(grid, text="Precision:").grid(row=r, column=6, sticky="w", pady=(6,0))
+        ttk.Entry(grid, textvariable=self.precision_var, width=8).grid(row=r, column=7, sticky="w", padx=4, pady=(6,0))
+
+        r+=1
+        ttk.Label(grid, text="Intelligence:").grid(row=r, column=0, sticky="w", pady=(6,0))
+        ttk.Entry(grid, textvariable=self.intelligence_var, width=8).grid(row=r, column=1, sticky="w", padx=4, pady=(6,0))
+        ttk.Label(grid, text="Willpower:").grid(row=r, column=2, sticky="w", pady=(6,0))
+        ttk.Entry(grid, textvariable=self.willpower_var, width=8).grid(row=r, column=3, sticky="w", padx=4, pady=(6,0))
 
         r+=1
         ttk.Label(grid, text="Bulk Mode:").grid(row=r, column=0, sticky="w", pady=(6,0))
@@ -395,6 +419,18 @@ class App(tk.Tk):
             fields.append(("skillPoint", self.skill_var.get()))
         if self.living_skill_var.get().strip():
             fields.append(("livingSkillPoint", self.living_skill_var.get()))
+        if self.strength_var.get().strip():
+            fields.append(("BSstrength", self.strength_var.get()))
+        if self.endurance_var.get().strip():
+            fields.append(("BSendurance", self.endurance_var.get()))
+        if self.agility_var.get().strip():
+            fields.append(("BSagility", self.agility_var.get()))
+        if self.precision_var.get().strip():
+            fields.append(("BSprecision", self.precision_var.get()))
+        if self.intelligence_var.get().strip():
+            fields.append(("BSintelligence", self.intelligence_var.get()))
+        if self.willpower_var.get().strip():
+            fields.append(("BSwillpower", self.willpower_var.get()))
 
         if not fields:
             messagebox.showwarning(APP_TITLE, "Enter at least one field value to apply.")

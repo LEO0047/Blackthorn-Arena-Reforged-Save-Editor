@@ -9,7 +9,7 @@
 主要功能
 - 讀取 / 顯示角鬥士名單（預設只顯示玩家隊伍 team==0，可切換「全部 NPC」）
 - 搜尋、等級下限篩選、只看名字含底線 _ 的角色
-- 批次編輯：等級 / 潛力點 potentialPoint / 技能點 skillPoint / 生活技能點 livingSkillPoint
+ - 批次編輯：等級 / 潛力點 potentialPoint / 技能點 skillPoint / 生活技能點 livingSkillPoint / 基礎能力（BSstrength、BSendurance、BSagility、BSprecision、BSintelligence、BSwillpower）
 - 全局屬性：金錢（wealth）、聲望（reputation）
 - 視覺強化：字體放大、列間距加大、斑馬紋、關鍵字高亮、列頭可排序、亮/暗色主題
 - 自動備份：儲存時會在原始檔旁建立 .bak.時間戳
@@ -168,6 +168,12 @@ class App(tk.Tk):
         self.potential_var = tk.StringVar(value="")
         self.skill_var = tk.StringVar(value="")
         self.living_skill_var = tk.StringVar(value="")
+        self.strength_var = tk.StringVar(value="")
+        self.endurance_var = tk.StringVar(value="")
+        self.agility_var = tk.StringVar(value="")
+        self.precision_var = tk.StringVar(value="")
+        self.intelligence_var = tk.StringVar(value="")
+        self.willpower_var = tk.StringVar(value="")
 
         self.bulk_mode_var = tk.StringVar(value="add")  # add / set
 
@@ -289,6 +295,22 @@ class App(tk.Tk):
         ttk.Entry(grid, textvariable=self.skill_var, width=8).grid(row=r, column=5, sticky="w", padx=6)
         ttk.Label(grid, text="生活技能點").grid(row=r, column=6, sticky="w")
         ttk.Entry(grid, textvariable=self.living_skill_var, width=10).grid(row=r, column=7, sticky="w", padx=6)
+
+        r+=1
+        ttk.Label(grid, text="力量").grid(row=r, column=0, sticky="w", pady=(8,0))
+        ttk.Entry(grid, textvariable=self.strength_var, width=8).grid(row=r, column=1, sticky="w", padx=6, pady=(8,0))
+        ttk.Label(grid, text="耐力").grid(row=r, column=2, sticky="w", pady=(8,0))
+        ttk.Entry(grid, textvariable=self.endurance_var, width=8).grid(row=r, column=3, sticky="w", padx=6, pady=(8,0))
+        ttk.Label(grid, text="敏捷").grid(row=r, column=4, sticky="w", pady=(8,0))
+        ttk.Entry(grid, textvariable=self.agility_var, width=8).grid(row=r, column=5, sticky="w", padx=6, pady=(8,0))
+        ttk.Label(grid, text="精準").grid(row=r, column=6, sticky="w", pady=(8,0))
+        ttk.Entry(grid, textvariable=self.precision_var, width=8).grid(row=r, column=7, sticky="w", padx=6, pady=(8,0))
+
+        r+=1
+        ttk.Label(grid, text="智力").grid(row=r, column=0, sticky="w", pady=(8,0))
+        ttk.Entry(grid, textvariable=self.intelligence_var, width=8).grid(row=r, column=1, sticky="w", padx=6, pady=(8,0))
+        ttk.Label(grid, text="意志力").grid(row=r, column=2, sticky="w", pady=(8,0))
+        ttk.Entry(grid, textvariable=self.willpower_var, width=8).grid(row=r, column=3, sticky="w", padx=6, pady=(8,0))
 
         r+=1
         ttk.Label(grid, text="模式").grid(row=r, column=0, sticky="w", pady=(8,0))
@@ -457,6 +479,18 @@ class App(tk.Tk):
             fields.append(("skillPoint", self.skill_var.get()))
         if self.living_skill_var.get().strip():
             fields.append(("livingSkillPoint", self.living_skill_var.get()))
+        if self.strength_var.get().strip():
+            fields.append(("BSstrength", self.strength_var.get()))
+        if self.endurance_var.get().strip():
+            fields.append(("BSendurance", self.endurance_var.get()))
+        if self.agility_var.get().strip():
+            fields.append(("BSagility", self.agility_var.get()))
+        if self.precision_var.get().strip():
+            fields.append(("BSprecision", self.precision_var.get()))
+        if self.intelligence_var.get().strip():
+            fields.append(("BSintelligence", self.intelligence_var.get()))
+        if self.willpower_var.get().strip():
+            fields.append(("BSwillpower", self.willpower_var.get()))
 
         if not fields:
             messagebox.showwarning(APP_TITLE, "請至少輸入一個欄位的數值。")

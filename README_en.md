@@ -6,13 +6,13 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue">
   <img alt="OS" src="https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-informational">
   <img alt="UI" src="https://img.shields.io/badge/UI-tkinter-blueviolet">
-  <img alt="Release" src="https://img.shields.io/badge/release-v1.0.0-brightgreen">
+  <img alt="Release" src="https://img.shields.io/badge/release-v1.1.0-brightgreen">
 </p>
 
 **Highlights**
 - Chinese UI (Traditional). Light/Dark theme, zebra table, search highlight, sortable headers, larger fonts/row height, UI scaling (100/125/150%).  
 - Filters: player team only (default team==0), name contains `_`, minimum level, keyword search.  
-- Bulk edit: level, `potentialPoint`, `skillPoint`, `livingSkillPoint` (add ± or set =).  
+- Bulk edit: level, `potentialPoint`, `skillPoint`, `livingSkillPoint`, base attributes (`BSstrength`, `BSendurance`, `BSagility`, `BSprecision`, `BSintelligence`, `BSwillpower`) (add ± or set =).
 - Global fields: `wealth`, `reputation`.  
 - Auto backup: `.bak.YYYYMMDD-HHMMSS` next to `sav.dat` when saving.
 
