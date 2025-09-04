@@ -6,13 +6,13 @@
   <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue">
   <img alt="OS" src="https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-informational">
   <img alt="UI" src="https://img.shields.io/badge/UI-tkinter-blueviolet">
-  <img alt="Release" src="https://img.shields.io/badge/release-v1.0.0-brightgreen">
+  <img alt="Release" src="https://img.shields.io/badge/release-v1.1.0-brightgreen">
 </p>
 
 **特色**
 - 繁中介面，亮/暗主題、斑馬紋表格、搜尋高亮、欄位可排序、字體/行高放大、介面縮放（100/125/150%）  
 - 篩選：只顯示玩家隊伍（預設 team==0）、只顯示名字含 `_`、最小等級、關鍵字搜尋  
-- 批次編輯：等級、`potentialPoint`、`skillPoint`、`livingSkillPoint`（加值 ± 或 設值 =）  
+- 批次編輯：等級、`potentialPoint`、`skillPoint`、`livingSkillPoint`、基礎能力（`BSstrength`、`BSendurance`、`BSagility`、`BSprecision`、`BSintelligence`、`BSwillpower`）（加值 ± 或 設值 =）
 - 全局屬性：金錢（`wealth`）、聲望（`reputation`）  
 - 自動備份：儲存時在原始 `sav.dat` 旁建立 `.bak.YYYYMMDD-HHMMSS`
 
