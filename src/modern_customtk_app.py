@@ -65,13 +65,15 @@ class ModernApp(ctk.CTk):
 
         super().__init__()
         self.title("Blackthorn Manager")
-        self.geometry("960x600")
-        self.minsize(820, 520)
+        self.geometry("980x620")
+        self.minsize(840, 540)
+        self.configure(fg_color="#151822")
 
         # data
         self._data: List[EntryData] = [EntryData.from_json(item) for item in DEFAULT_DATA]
         self._selected_index: Optional[int] = 0
         self._current_path: Optional[Path] = None
+        self._list_buttons: List[ctk.CTkButton] = []
 
         # configure layout
         self.columnconfigure(0, weight=1)
@@ -88,7 +90,7 @@ class ModernApp(ctk.CTk):
     # ------------------------------------------------------------------
     # layout builders
     def _build_title_bar(self) -> None:
-        title_bar = ctk.CTkFrame(self, corner_radius=0)
+        title_bar = ctk.CTkFrame(self, corner_radius=0, fg_color="#1f2333")
         title_bar.grid(row=0, column=0, sticky="ew")
         title_bar.columnconfigure(0, weight=1)
         title_bar.columnconfigure(1, weight=0)
@@ -97,14 +99,31 @@ class ModernApp(ctk.CTk):
             title_bar,
             text="Blackthorn Arena Data Manager",
             font=ctk.CTkFont(size=20, weight="bold"),
+            text_color="#f5f5ff",
         )
         title_label.grid(row=0, column=0, padx=20, pady=12, sticky="w")
 
         button_frame = ctk.CTkFrame(title_bar, fg_color="transparent")
         button_frame.grid(row=0, column=1, padx=12, pady=12, sticky="e")
 
-        load_button = ctk.CTkButton(button_frame, text="載入資料", command=self._action_load)
-        save_button = ctk.CTkButton(button_frame, text="儲存資料", command=self._action_save)
+        load_button = ctk.CTkButton(
+            button_frame,
+            text="載入資料",
+            command=self._action_load,
+            corner_radius=18,
+            fg_color="#6c5ce7",
+            hover_color="#5a4dd1",
+            text_color="#ffffff",
+        )
+        save_button = ctk.CTkButton(
+            button_frame,
+            text="儲存資料",
+            command=self._action_save,
+            corner_radius=18,
+            fg_color="#6366f1",
+            hover_color="#4f46e5",
+            text_color="#ffffff",
+        )
         load_button.grid(row=0, column=0, padx=(0, 8))
         save_button.grid(row=0, column=1)
 
@@ -119,43 +138,93 @@ class ModernApp(ctk.CTk):
         self._build_form_panel(main)
 
     def _build_list_panel(self, parent: ctk.CTkFrame) -> None:
-        list_container = ctk.CTkFrame(parent, corner_radius=12)
-        list_container.grid(row=0, column=0, sticky="nsw", padx=(0, 12))
+        list_container = ctk.CTkFrame(
+            parent,
+            corner_radius=16,
+            fg_color="#1f2333",
+            border_width=1,
+            border_color="#2c3146",
+        )
+        list_container.grid(row=0, column=0, sticky="nsw", padx=(0, 14))
         list_container.rowconfigure(1, weight=1)
 
-        header = ctk.CTkLabel(list_container, text="角色列表", font=ctk.CTkFont(size=16, weight="bold"))
+        header = ctk.CTkLabel(
+            list_container,
+            text="角色列表",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="#e0e6ff",
+        )
         header.grid(row=0, column=0, padx=16, pady=(16, 4), sticky="w")
 
-        self._list_frame = ctk.CTkScrollableFrame(list_container, width=220, corner_radius=8)
-        self._list_frame.grid(row=1, column=0, padx=12, pady=(0, 12), sticky="nsw")
+        self._list_frame = ctk.CTkScrollableFrame(
+            list_container,
+            width=240,
+            corner_radius=12,
+            fg_color="#252a3b",
+        )
+        self._list_frame.grid(row=1, column=0, padx=16, pady=(0, 12), sticky="nsw")
 
         button_bar = ctk.CTkFrame(list_container, fg_color="transparent")
         button_bar.grid(row=2, column=0, padx=12, pady=(0, 16), sticky="ew")
         button_bar.columnconfigure((0, 1), weight=1)
 
-        add_button = ctk.CTkButton(button_bar, text="新增", command=self._action_add)
-        delete_button = ctk.CTkButton(button_bar, text="刪除", command=self._action_delete)
+        add_button = ctk.CTkButton(
+            button_bar,
+            text="新增",
+            command=self._action_add,
+            corner_radius=16,
+            fg_color="#4cc9f0",
+            hover_color="#38bdf8",
+            text_color="#041421",
+        )
+        delete_button = ctk.CTkButton(
+            button_bar,
+            text="刪除",
+            command=self._action_delete,
+            corner_radius=16,
+            fg_color="#f25f5c",
+            hover_color="#e63946",
+            text_color="#ffffff",
+        )
         add_button.grid(row=0, column=0, padx=(0, 6), sticky="ew")
         delete_button.grid(row=0, column=1, padx=(6, 0), sticky="ew")
 
     def _build_form_panel(self, parent: ctk.CTkFrame) -> None:
-        form_container = ctk.CTkFrame(parent, corner_radius=12)
+        form_container = ctk.CTkFrame(
+            parent,
+            corner_radius=18,
+            fg_color="#1f2333",
+            border_width=1,
+            border_color="#2c3146",
+        )
         form_container.grid(row=0, column=1, sticky="nsew")
         form_container.columnconfigure(0, weight=1)
 
-        header = ctk.CTkLabel(form_container, text="角色資訊", font=ctk.CTkFont(size=16, weight="bold"))
+        header = ctk.CTkLabel(
+            form_container,
+            text="角色資訊",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="#e0e6ff",
+        )
         header.grid(row=0, column=0, padx=20, pady=(16, 6), sticky="w")
 
         self._name_var = ctk.StringVar()
         self._title_var = ctk.StringVar()
         self._faction_var = ctk.StringVar()
-        self._notes_widget = ctk.CTkTextbox(form_container, height=200)
+        self._notes_widget = ctk.CTkTextbox(
+            form_container,
+            height=220,
+            corner_radius=12,
+            fg_color="#252a3b",
+            text_color="#e6e8ff",
+            border_width=0,
+        )
 
         self._add_labeled_entry(form_container, "姓名", self._name_var, 1)
         self._add_labeled_entry(form_container, "頭銜", self._title_var, 2)
         self._add_labeled_entry(form_container, "陣營", self._faction_var, 3)
 
-        notes_label = ctk.CTkLabel(form_container, text="備註")
+        notes_label = ctk.CTkLabel(form_container, text="備註", text_color="#b8bfe6")
         notes_label.grid(row=4, column=0, padx=20, pady=(12, 4), sticky="w")
         self._notes_widget.grid(row=5, column=0, padx=20, pady=(0, 12), sticky="nsew")
         form_container.rowconfigure(5, weight=1)
@@ -163,22 +232,42 @@ class ModernApp(ctk.CTk):
         action_bar = ctk.CTkFrame(form_container, fg_color="transparent")
         action_bar.grid(row=6, column=0, padx=20, pady=(0, 16), sticky="e")
 
-        apply_button = ctk.CTkButton(action_bar, text="套用變更", command=self._action_apply)
+        apply_button = ctk.CTkButton(
+            action_bar,
+            text="套用變更",
+            command=self._action_apply,
+            corner_radius=18,
+            fg_color="#10b981",
+            hover_color="#059669",
+            text_color="#041421",
+        )
         apply_button.grid(row=0, column=0, padx=(0, 12))
 
     def _add_labeled_entry(self, parent: ctk.CTkFrame, label: str, var: ctk.StringVar, row: int) -> None:
-        lbl = ctk.CTkLabel(parent, text=label)
-        entry = ctk.CTkEntry(parent, textvariable=var)
+        lbl = ctk.CTkLabel(parent, text=label, text_color="#b8bfe6")
+        entry = ctk.CTkEntry(
+            parent,
+            textvariable=var,
+            corner_radius=12,
+            fg_color="#252a3b",
+            border_width=0,
+            text_color="#f5f5ff",
+        )
         lbl.grid(row=row, column=0, padx=20, pady=(8, 2), sticky="w")
         entry.grid(row=row, column=0, padx=20, pady=(0, 4), sticky="ew")
 
     def _build_status_bar(self) -> None:
-        status_bar = ctk.CTkFrame(self, corner_radius=0)
+        status_bar = ctk.CTkFrame(self, corner_radius=0, fg_color="#1f2333")
         status_bar.grid(row=2, column=0, sticky="ew")
         status_bar.columnconfigure(0, weight=1)
 
         self._status_var = ctk.StringVar(value="準備就緒")
-        status_label = ctk.CTkLabel(status_bar, textvariable=self._status_var, anchor="w")
+        status_label = ctk.CTkLabel(
+            status_bar,
+            textvariable=self._status_var,
+            anchor="w",
+            text_color="#b8bfe6",
+        )
         status_label.grid(row=0, column=0, padx=16, pady=6, sticky="ew")
 
     # ------------------------------------------------------------------
@@ -187,20 +276,31 @@ class ModernApp(ctk.CTk):
         for widget in self._list_frame.winfo_children():
             widget.destroy()
 
+        self._list_buttons.clear()
         for index, entry in enumerate(self._data):
             button = ctk.CTkButton(
                 self._list_frame,
                 text=f"{entry.name or '未命名'}\n{entry.title}",
-                width=180,
+                width=200,
+                height=56,
                 anchor="w",
+                corner_radius=12,
+                fg_color="#2a3045",
+                hover_color="#353d57",
+                text_color="#d1d5ff",
+                font=ctk.CTkFont(size=14, weight="bold"),
                 command=lambda idx=index: self._select_index(idx),
             )
             button.grid(row=index, column=0, padx=8, pady=6, sticky="ew")
+            self._list_buttons.append(button)
+
+        self._apply_list_selection_style()
 
     def _select_index(self, index: Optional[int]) -> None:
         if index is None or not (0 <= index < len(self._data)):
             self._selected_index = None
             self._clear_form()
+            self._apply_list_selection_style()
             return
 
         self._selected_index = index
@@ -211,6 +311,7 @@ class ModernApp(ctk.CTk):
         self._notes_widget.delete("1.0", "end")
         self._notes_widget.insert("1.0", entry.notes)
         self._set_status(f"已選擇：{entry.name or '未命名'}")
+        self._apply_list_selection_style()
 
     def _clear_form(self) -> None:
         self._name_var.set("")
@@ -228,6 +329,21 @@ class ModernApp(ctk.CTk):
 
     def _set_status(self, message: str) -> None:
         self._status_var.set(message)
+
+    def _apply_list_selection_style(self) -> None:
+        for idx, button in enumerate(self._list_buttons):
+            if idx == self._selected_index:
+                button.configure(
+                    fg_color="#6366f1",
+                    hover_color="#4f46e5",
+                    text_color="#ffffff",
+                )
+            else:
+                button.configure(
+                    fg_color="#2a3045",
+                    hover_color="#353d57",
+                    text_color="#d1d5ff",
+                )
 
     # ------------------------------------------------------------------
     # actions
