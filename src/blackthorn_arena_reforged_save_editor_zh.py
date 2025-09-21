@@ -17,12 +17,19 @@ BSagility、BSprecision、BSintelligence、BSwillpower）
 """
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import json
 import os
 import time
 from typing import Dict, List, Tuple
 
-import customtkinter as ctk
+if importlib.util.find_spec("customtkinter") is None:
+    raise SystemExit(
+        "找不到 customtkinter 模組，請先執行 `pip install customtkinter` 後再啟動。"
+    )
+
+ctk = importlib.import_module("customtkinter")
 from tkinter import filedialog, messagebox
 
 APP_TITLE = "黑荊棘角鬥場：重鑄版 存檔修改器（JSON）"
