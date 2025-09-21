@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -9,24 +8,43 @@
 主要功能
 - 讀取 / 顯示角鬥士名單（預設只顯示玩家隊伍 team==0，可切換「全部 NPC」）
 - 搜尋、等級下限篩選、只看名字含底線 _ 的角色
- - 批次編輯：等級 / 潛力點 potentialPoint / 技能點 skillPoint / 生活技能點 livingSkillPoint / 基礎能力（BSstrength、BSendurance、BSagility、BSprecision、BSintelligence、BSwillpower）
+ - 批次編輯：等級 / 潛力點 potentialPoint / 技能點 skillPoint / 生活技能點 livingSkillPoint / 基礎能力（BSstrength、BSendurance、
+BSagility、BSprecision、BSintelligence、BSwillpower）
 - 全局屬性：金錢（wealth）、聲望（reputation）
-- 視覺強化：字體放大、列間距加大、斑馬紋、關鍵字高亮、列頭可排序、亮/暗色主題
 - 自動備份：儲存時會在原始檔旁建立 .bak.時間戳
 
 免責：請先備份存檔，風險自負。
 """
+from __future__ import annotations
+
 import json
 import os
-import sys
 import time
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from typing import Dict, List, Tuple
 
-from ui_style_apple import init_style, apply_palette as style_apply_palette, card as style_card
+import customtkinter as ctk
+from tkinter import filedialog, messagebox
 
 APP_TITLE = "黑荊棘角鬥場：重鑄版 存檔修改器（JSON）"
 DEFAULT_FILENAME = "sav.dat"
+
+COLUMN_DEFINITIONS: List[Tuple[str, str, int]] = [
+    ("idx", "索引", 70),
+    ("id", "ID", 90),
+    ("unitId", "單位ID", 90),
+    ("team", "隊伍", 70),
+    ("unitname", "名稱", 240),
+    ("level", "等級", 80),
+    ("potentialPoint", "潛力點", 100),
+    ("skillPoint", "技能點", 100),
+    ("livingSkillPoint", "生活技能點", 120),
+]
+
+EVEN_ROW_COLOR = "#23283a"
+ODD_ROW_COLOR = "#1c2133"
+MATCH_ROW_COLOR = "#34405f"
+SELECTED_BORDER_COLOR = "#4f83ff"
+
 
 # ---------- 工具 ----------
 def safe_int(v, default=None):
@@ -34,6 +52,7 @@ def safe_int(v, default=None):
         return int(v)
     except Exception:
         return default
+
 
 # ---------- 資料模型 ----------
 class SaveModel:
@@ -132,62 +151,68 @@ class SaveModel:
                 return True
         return False
 
+
 # ---------- 介面 ----------
-class App(tk.Tk):
+class App(ctk.CTk):
     def __init__(self):
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("dark-blue")
+
         super().__init__()
         self.title(APP_TITLE)
-        self.geometry("1200x700")
-        self.minsize(1000, 620)
-
-        # DPI/縮放
-        try:
-            self.tk.call('tk', 'scaling', 1.25)  # 預設放大 125%
-        except Exception:
-            pass
-
-        # 風格與主題
-        self.style = init_style(self)
-        self.theme_var = tk.StringVar(value="亮色")
-        self.tag_colors = {}
-        self.apply_palette(self.theme_var.get())
+        self.geometry("1200x720")
+        self.minsize(1040, 640)
+        self.configure(fg_color="#111521")
 
         # 內部狀態
         self.model = SaveModel()
-        self.show_only_player_var = tk.BooleanVar(value=True)
-        self.only_underscore_var = tk.BooleanVar(value=False)
-        self.search_var = tk.StringVar(value="")
-        self.filter_min_level_var = tk.StringVar(value="")
+        self.show_only_player_var = ctk.BooleanVar(value=True)
+        self.only_underscore_var = ctk.BooleanVar(value=False)
+        self.search_var = ctk.StringVar(value="")
+        self.filter_min_level_var = ctk.StringVar(value="")
 
         # 全域屬性
-        self.gold_var = tk.StringVar(value="")
-        self.rep_var = tk.StringVar(value="")
+        self.gold_var = ctk.StringVar(value="")
+        self.rep_var = ctk.StringVar(value="")
 
         # 編輯欄位
-        self.level_var = tk.StringVar(value="")
-        self.potential_var = tk.StringVar(value="")
-        self.skill_var = tk.StringVar(value="")
-        self.living_skill_var = tk.StringVar(value="")
-        self.strength_var = tk.StringVar(value="")
-        self.endurance_var = tk.StringVar(value="")
-        self.agility_var = tk.StringVar(value="")
-        self.precision_var = tk.StringVar(value="")
-        self.intelligence_var = tk.StringVar(value="")
-        self.willpower_var = tk.StringVar(value="")
+        self.level_var = ctk.StringVar(value="")
+        self.potential_var = ctk.StringVar(value="")
+        self.skill_var = ctk.StringVar(value="")
+        self.living_skill_var = ctk.StringVar(value="")
+        self.strength_var = ctk.StringVar(value="")
+        self.endurance_var = ctk.StringVar(value="")
+        self.agility_var = ctk.StringVar(value="")
+        self.precision_var = ctk.StringVar(value="")
+        self.intelligence_var = ctk.StringVar(value="")
+        self.willpower_var = ctk.StringVar(value="")
 
-        self.bulk_mode_var = tk.StringVar(value="add")  # add / set
+        self.bulk_mode_var = ctk.StringVar(value="add")  # add / set
 
         # 排序狀態
         self.sort_column = None
         self.sort_reverse = False
 
-        # UI
-        self.create_menu()
-        self.create_widgets()
+        # 選取狀態
+        self.selected_indices: set[int] = set()
+        self.row_vars: Dict[int, ctk.BooleanVar] = {}
+        self.row_frames: Dict[int, ctk.CTkFrame] = {}
+        self.current_rows: List[Tuple[int, Dict[str, object]]] = []
+
+        # 狀態列
+        self.status_var = ctk.StringVar(value="準備就緒")
+
+        # 版面配置
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
+
+        self._build_title_bar()
+        self._build_main_area()
+        self._build_status_bar()
 
         # 快捷鍵
-        self.bind_all("<Control-o>", lambda e: self.on_open())
-        self.bind_all("<Control-s>", lambda e: self.on_save())
+        self.bind("<Control-o>", lambda e: self.on_open())
+        self.bind("<Control-s>", lambda e: self.on_save())
 
         # 嘗試自動載入
         if os.path.exists(DEFAULT_FILENAME):
@@ -195,149 +220,361 @@ class App(tk.Tk):
                 self.load_path(DEFAULT_FILENAME)
             except Exception as e:
                 print("自動載入失敗:", e)
+                self.set_status("自動載入失敗")
 
-    # --------- 主題配色 ---------
-    def apply_palette(self, kind):
-        self.tag_colors = style_apply_palette(self, self.style, kind)
+    # ------------------------------------------------------------------
+    # UI 建構
+    def _build_title_bar(self) -> None:
+        bar = ctk.CTkFrame(self, corner_radius=0, fg_color="#161b2a")
+        bar.grid(row=0, column=0, sticky="ew")
+        bar.columnconfigure(0, weight=1)
+        bar.columnconfigure(1, weight=0)
 
-    # ---------- UI ----------
-    def create_menu(self):
-        mbar = tk.Menu(self)
-        filem = tk.Menu(mbar, tearoff=False)
-        filem.add_command(label="開啟存檔... (Ctrl+O)", command=self.on_open)
-        filem.add_command(label="儲存 (Ctrl+S)", command=self.on_save)
-        filem.add_command(label="另存新檔...", command=self.on_save_as)
-        filem.add_separator()
-        filem.add_command(label="離開", command=self.on_quit)
-        mbar.add_cascade(label="檔案", menu=filem)
+        title_label = ctk.CTkLabel(
+            bar,
+            text="黑荊棘角鬥場：重鑄版 存檔修改器",
+            font=ctk.CTkFont(size=22, weight="bold"),
+            text_color="#f4f6ff",
+        )
+        title_label.grid(row=0, column=0, padx=20, pady=14, sticky="w")
 
-        viewm = tk.Menu(mbar, tearoff=False)
-        viewm.add_command(label="介面縮放 100%", command=lambda: self.tk.call('tk', 'scaling', 1.0))
-        viewm.add_command(label="介面縮放 125%", command=lambda: self.tk.call('tk', 'scaling', 1.25))
-        viewm.add_command(label="介面縮放 150%", command=lambda: self.tk.call('tk', 'scaling', 1.5))
-        mbar.add_cascade(label="視圖", menu=viewm)
+        btn_frame = ctk.CTkFrame(bar, fg_color="transparent")
+        btn_frame.grid(row=0, column=1, padx=16, pady=10, sticky="e")
 
-        helpm = tk.Menu(mbar, tearoff=False)
-        helpm.add_command(label="關於", command=self.on_about)
-        mbar.add_cascade(label="說明", menu=helpm)
-        self.config(menu=mbar)
+        open_btn = ctk.CTkButton(
+            btn_frame,
+            text="開啟存檔",
+            command=self.on_open,
+            corner_radius=20,
+            fg_color="#5a67d8",
+            hover_color="#4854bd",
+            width=120,
+        )
+        save_btn = ctk.CTkButton(
+            btn_frame,
+            text="儲存",
+            command=self.on_save,
+            corner_radius=20,
+            fg_color="#3b82f6",
+            hover_color="#2563eb",
+            width=120,
+        )
+        about_btn = ctk.CTkButton(
+            btn_frame,
+            text="關於",
+            command=self.on_about,
+            corner_radius=20,
+            fg_color="#374151",
+            hover_color="#4b5563",
+            width=80,
+        )
+        open_btn.grid(row=0, column=0, padx=(0, 8))
+        save_btn.grid(row=0, column=1, padx=(0, 8))
+        about_btn.grid(row=0, column=2)
 
-    def create_widgets(self):
-        root = ttk.Frame(self, padding=10)
-        root.pack(fill="both", expand=True)
+    def _build_main_area(self) -> None:
+        main = ctk.CTkFrame(self, fg_color="transparent")
+        main.grid(row=1, column=0, padx=18, pady=16, sticky="nsew")
+        main.columnconfigure(0, weight=2)
+        main.columnconfigure(1, weight=3)
+        main.rowconfigure(0, weight=1)
 
-        nb = ttk.Notebook(root)
-        nb.pack(fill="both", expand=True)
+        self._build_list_panel(main)
+        self._build_editor_panel(main)
 
-        # -------- 通用 --------
-        tab_general = ttk.Frame(nb)
-        nb.add(tab_general, text="通用")
+    def _build_list_panel(self, parent: ctk.CTkFrame) -> None:
+        panel = ctk.CTkFrame(
+            parent,
+            corner_radius=18,
+            fg_color="#1b1f2d",
+            border_width=1,
+            border_color="#262d3f",
+        )
+        panel.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+        panel.columnconfigure(0, weight=1)
+        panel.rowconfigure(3, weight=1)
 
-        topbar = style_card(tab_general)
-        ttk.Label(topbar, text="外觀：", width=6).pack(side="left")
-        ttk.OptionMenu(topbar, self.theme_var, self.theme_var.get(), "亮色", "暗色", command=self.on_theme_change).pack(side="left", padx=(0,10))
-        ttk.Label(topbar, text="（可在「視圖」選單調整介面縮放）", style="Hint.TLabel").pack(side="left")
+        header = ctk.CTkLabel(
+            panel,
+            text="角鬥士清單",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="#e0e6ff",
+        )
+        header.grid(row=0, column=0, padx=18, pady=(18, 6), sticky="w")
 
-        meta = style_card(tab_general, "全局屬性")
-        ttk.Label(meta, text="金錢 (wealth)：").pack(side="left")
-        ttk.Entry(meta, textvariable=self.gold_var, width=10).pack(side="left", padx=(4,12))
-        ttk.Label(meta, text="聲望 (reputation)：").pack(side="left")
-        ttk.Entry(meta, textvariable=self.rep_var, width=10).pack(side="left", padx=(4,12))
-        ttk.Button(meta, text="更新全局屬性", command=self.on_update_meta).pack(side="left")
-        ttk.Label(meta, text="提示：修改後記得到【檔案→儲存】寫回存檔（會自動備份）", style="Hint.TLabel").pack(anchor="w", pady=(6,0))
+        filter_frame = ctk.CTkFrame(panel, fg_color="transparent")
+        filter_frame.grid(row=1, column=0, padx=18, pady=6, sticky="ew")
+        filter_frame.columnconfigure(5, weight=1)
 
-        # -------- 角鬥士 --------
-        tab_glad = ttk.Frame(nb)
-        nb.add(tab_glad, text="角鬥士")
+        show_player_chk = ctk.CTkCheckBox(
+            filter_frame,
+            text="只顯示玩家隊伍 (team=0)",
+            variable=self.show_only_player_var,
+            command=self.refresh_table,
+        )
+        underscore_chk = ctk.CTkCheckBox(
+            filter_frame,
+            text="只顯示名字含底線 _",
+            variable=self.only_underscore_var,
+            command=self.refresh_table,
+        )
+        search_entry = ctk.CTkEntry(
+            filter_frame,
+            textvariable=self.search_var,
+            placeholder_text="搜尋名字",
+            width=160,
+        )
+        level_entry = ctk.CTkEntry(
+            filter_frame,
+            textvariable=self.filter_min_level_var,
+            placeholder_text="等級下限",
+            width=100,
+        )
+        apply_btn = ctk.CTkButton(
+            filter_frame,
+            text="套用篩選",
+            command=self.refresh_table,
+            width=120,
+        )
+        show_player_chk.grid(row=0, column=0, padx=(0, 12), pady=4, sticky="w")
+        underscore_chk.grid(row=0, column=1, padx=(0, 12), pady=4, sticky="w")
+        search_entry.grid(row=0, column=2, padx=(0, 10), pady=4, sticky="w")
+        level_entry.grid(row=0, column=3, padx=(0, 12), pady=4, sticky="w")
+        apply_btn.grid(row=0, column=4, padx=(0, 12), pady=4, sticky="e")
 
-        filt = style_card(tab_glad, "篩選")
-        row1 = ttk.Frame(filt)
-        row1.pack(fill="x", pady=4)
-        ttk.Checkbutton(row1, text="只顯示玩家隊伍 (team=0)", variable=self.show_only_player_var, command=self.refresh_table).pack(side="left")
-        ttk.Checkbutton(row1, text="只顯示名字含底線 _", variable=self.only_underscore_var, command=self.refresh_table).pack(side="left", padx=(10,0))
-        ttk.Label(row1, text="搜尋名字：").pack(side="left", padx=(14,2))
-        ttk.Entry(row1, textvariable=self.search_var, width=20).pack(side="left", padx=(0,10))
-        ttk.Label(row1, text="等級下限：").pack(side="left")
-        ttk.Entry(row1, textvariable=self.filter_min_level_var, width=6).pack(side="left", padx=(4,6))
-        ttk.Button(row1, text="套用篩選", command=self.refresh_table).pack(side="left", padx=(8,0))
+        header_frame = ctk.CTkFrame(panel, fg_color="#111521", corner_radius=12)
+        header_frame.grid(row=2, column=0, padx=18, pady=(10, 6), sticky="ew")
+        header_frame.columnconfigure(0, weight=0)
+        for i in range(1, len(COLUMN_DEFINITIONS) + 1):
+            header_frame.columnconfigure(i, weight=0)
 
-        table_card = style_card(tab_glad, "角鬥士清單")
-        table_frame = ttk.Frame(table_card)
-        table_frame.pack(fill="both", expand=True)
+        select_label = ctk.CTkLabel(
+            header_frame,
+            text="選取",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="#9aa4d1",
+            width=60,
+        )
+        select_label.grid(row=0, column=0, padx=(12, 6), pady=8, sticky="w")
 
-        columns = ("idx","id","unitId","team","unitname","level","potentialPoint","skillPoint","livingSkillPoint")
-        headers = {
-            "idx": "索引", "id": "ID", "unitId": "單位ID", "team": "隊伍",
-            "unitname": "名稱", "level": "等級", "potentialPoint": "潛力點",
-            "skillPoint": "技能點", "livingSkillPoint": "生活技能點"
-        }
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", selectmode="extended")
-        col_widths = (70,80,80,60,280,70,90,90,120)
-        for col, w in zip(columns, col_widths):
-            self.tree.heading(col, text=headers[col], command=lambda c=col: self.on_sort_column(c))
-            self.tree.column(col, width=w, anchor="w")
-        self.tree.pack(side="left", fill="both", expand=True)
+        for col_index, (key, title, width) in enumerate(COLUMN_DEFINITIONS, start=1):
+            btn = ctk.CTkButton(
+                header_frame,
+                text=title,
+                command=lambda c=key: self.on_sort_column(c),
+                corner_radius=12,
+                fg_color="#1f2537",
+                hover_color="#2c3146",
+                width=width,
+            )
+            btn.grid(row=0, column=col_index, padx=6, pady=8, sticky="w")
 
-        yscroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscroll=yscroll.set)
-        yscroll.pack(side="right", fill="y")
+        self.scroll_frame = ctk.CTkScrollableFrame(panel, fg_color="transparent")
+        self.scroll_frame.grid(row=3, column=0, padx=18, pady=(0, 18), sticky="nsew")
+        self.scroll_frame.grid_columnconfigure(0, weight=1)
 
-        editor = style_card(tab_glad, "批次編輯（套用至選取的角色）")
-        grid = ttk.Frame(editor)
-        grid.pack(fill="x", padx=2, pady=2)
+    def _build_editor_panel(self, parent: ctk.CTkFrame) -> None:
+        panel = ctk.CTkFrame(
+            parent,
+            corner_radius=18,
+            fg_color="#1b1f2d",
+            border_width=1,
+            border_color="#262d3f",
+        )
+        panel.grid(row=0, column=1, sticky="nsew")
+        panel.columnconfigure(0, weight=1)
 
-        r=0
-        ttk.Label(grid, text="等級").grid(row=r, column=0, sticky="w")
-        ttk.Entry(grid, textvariable=self.level_var, width=8).grid(row=r, column=1, sticky="w", padx=6)
-        ttk.Label(grid, text="潛力點").grid(row=r, column=2, sticky="w")
-        ttk.Entry(grid, textvariable=self.potential_var, width=8).grid(row=r, column=3, sticky="w", padx=6)
-        ttk.Label(grid, text="技能點").grid(row=r, column=4, sticky="w")
-        ttk.Entry(grid, textvariable=self.skill_var, width=8).grid(row=r, column=5, sticky="w", padx=6)
-        ttk.Label(grid, text="生活技能點").grid(row=r, column=6, sticky="w")
-        ttk.Entry(grid, textvariable=self.living_skill_var, width=10).grid(row=r, column=7, sticky="w", padx=6)
+        meta_frame = ctk.CTkFrame(panel, fg_color="#151929", corner_radius=16)
+        meta_frame.grid(row=0, column=0, padx=18, pady=(20, 10), sticky="ew")
+        meta_frame.columnconfigure(1, weight=1)
 
-        r+=1
-        ttk.Label(grid, text="力量").grid(row=r, column=0, sticky="w", pady=(8,0))
-        ttk.Entry(grid, textvariable=self.strength_var, width=8).grid(row=r, column=1, sticky="w", padx=6, pady=(8,0))
-        ttk.Label(grid, text="耐力").grid(row=r, column=2, sticky="w", pady=(8,0))
-        ttk.Entry(grid, textvariable=self.endurance_var, width=8).grid(row=r, column=3, sticky="w", padx=6, pady=(8,0))
-        ttk.Label(grid, text="敏捷").grid(row=r, column=4, sticky="w", pady=(8,0))
-        ttk.Entry(grid, textvariable=self.agility_var, width=8).grid(row=r, column=5, sticky="w", padx=6, pady=(8,0))
-        ttk.Label(grid, text="精準").grid(row=r, column=6, sticky="w", pady=(8,0))
-        ttk.Entry(grid, textvariable=self.precision_var, width=8).grid(row=r, column=7, sticky="w", padx=6, pady=(8,0))
+        meta_title = ctk.CTkLabel(
+            meta_frame,
+            text="全局屬性",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="#f1f3ff",
+        )
+        meta_title.grid(row=0, column=0, columnspan=2, padx=16, pady=(14, 6), sticky="w")
 
-        r+=1
-        ttk.Label(grid, text="智力").grid(row=r, column=0, sticky="w", pady=(8,0))
-        ttk.Entry(grid, textvariable=self.intelligence_var, width=8).grid(row=r, column=1, sticky="w", padx=6, pady=(8,0))
-        ttk.Label(grid, text="意志力").grid(row=r, column=2, sticky="w", pady=(8,0))
-        ttk.Entry(grid, textvariable=self.willpower_var, width=8).grid(row=r, column=3, sticky="w", padx=6, pady=(8,0))
+        gold_label = ctk.CTkLabel(meta_frame, text="金錢 (wealth)：", text_color="#cbd5ff")
+        gold_entry = ctk.CTkEntry(meta_frame, textvariable=self.gold_var, width=140)
+        rep_label = ctk.CTkLabel(meta_frame, text="聲望 (reputation)：", text_color="#cbd5ff")
+        rep_entry = ctk.CTkEntry(meta_frame, textvariable=self.rep_var, width=140)
+        update_btn = ctk.CTkButton(meta_frame, text="更新全局屬性", command=self.on_update_meta)
+        save_as_btn = ctk.CTkButton(meta_frame, text="另存新檔", command=self.on_save_as, fg_color="#3f3f46", hover_color="#51525b")
 
-        r+=1
-        ttk.Label(grid, text="模式").grid(row=r, column=0, sticky="w", pady=(8,0))
-        ttk.Radiobutton(grid, text="加值 (±)", variable=self.bulk_mode_var, value="add").grid(row=r, column=1, sticky="w", pady=(8,0))
-        ttk.Radiobutton(grid, text="設值 (=)", variable=self.bulk_mode_var, value="set").grid(row=r, column=2, sticky="w", pady=(8,0))
-        ttk.Button(grid, text="套用到選取", command=self.on_apply_selected).grid(row=r, column=3, sticky="w", padx=10, pady=(8,0))
+        gold_label.grid(row=1, column=0, padx=(16, 4), pady=6, sticky="w")
+        gold_entry.grid(row=1, column=1, padx=(0, 16), pady=6, sticky="w")
+        rep_label.grid(row=2, column=0, padx=(16, 4), pady=6, sticky="w")
+        rep_entry.grid(row=2, column=1, padx=(0, 16), pady=6, sticky="w")
+        update_btn.grid(row=3, column=0, padx=16, pady=(12, 14), sticky="w")
+        save_as_btn.grid(row=3, column=1, padx=(0, 16), pady=(12, 14), sticky="e")
 
-        ttk.Label(editor, text="建議：先用「加值」小幅調整（+5～+10），避免過度破壞平衡。", style="Hint.TLabel").pack(anchor="w", pady=(6,0))
+        bulk_frame = ctk.CTkFrame(panel, fg_color="#151929", corner_radius=16)
+        bulk_frame.grid(row=1, column=0, padx=18, pady=(10, 20), sticky="nsew")
+        bulk_frame.columnconfigure(1, weight=1)
 
-        # -------- 其他分頁 --------
-        tab_traits = ttk.Frame(nb)
-        nb.add(tab_traits, text="特性")
-        style_card(tab_traits, "尚未實作")
+        bulk_title = ctk.CTkLabel(
+            bulk_frame,
+            text="批次編輯（套用至選取的角色）",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="#f1f3ff",
+        )
+        bulk_title.grid(row=0, column=0, columnspan=4, padx=16, pady=(14, 10), sticky="w")
 
-        tab_items = ttk.Frame(nb)
-        nb.add(tab_items, text="物品")
-        style_card(tab_items, "尚未實作")
+        form = ctk.CTkFrame(bulk_frame, fg_color="transparent")
+        form.grid(row=1, column=0, columnspan=4, padx=16, pady=4, sticky="ew")
+        for i in range(8):
+            form.columnconfigure(i, weight=1 if i in (4, 5) else 0)
 
-        tab_arena = ttk.Frame(nb)
-        nb.add(tab_arena, text="競技場")
-        style_card(tab_arena, "尚未實作")
+        entries = [
+            ("等級", self.level_var),
+            ("潛力點", self.potential_var),
+            ("技能點", self.skill_var),
+            ("生活技能點", self.living_skill_var),
+            ("力量", self.strength_var),
+            ("耐力", self.endurance_var),
+            ("敏捷", self.agility_var),
+            ("精準", self.precision_var),
+            ("智力", self.intelligence_var),
+            ("意志力", self.willpower_var),
+        ]
 
-    # ---------- 事件 ----------
-    def on_theme_change(self, *_):
-        self.apply_palette(self.theme_var.get())
-        self.refresh_table()
+        for idx, (name, var) in enumerate(entries[:4]):
+            column = idx * 2
+            label = ctk.CTkLabel(form, text=name, text_color="#cbd5ff")
+            entry = ctk.CTkEntry(form, textvariable=var, width=100)
+            label.grid(row=0, column=column, padx=(0, 6), pady=6, sticky="w")
+            entry.grid(row=0, column=column + 1, padx=(0, 18), pady=6, sticky="w")
 
+        for idx, (name, var) in enumerate(entries[4:]):
+            r = 1 + idx // 4
+            c = (idx % 4) * 2
+            label = ctk.CTkLabel(form, text=name, text_color="#cbd5ff")
+            entry = ctk.CTkEntry(form, textvariable=var, width=100)
+            label.grid(row=r, column=c, padx=(0, 6), pady=6, sticky="w")
+            entry.grid(row=r, column=c + 1, padx=(0, 18), pady=6, sticky="w")
+
+        mode_label = ctk.CTkLabel(bulk_frame, text="模式", text_color="#cbd5ff")
+        mode_menu = ctk.CTkOptionMenu(
+            bulk_frame,
+            values=["加值 (±)", "設值 (=)"],
+            command=self._on_mode_change,
+            width=160,
+        )
+        mode_menu.set("加值 (±)")
+        apply_btn = ctk.CTkButton(
+            bulk_frame,
+            text="套用到選取",
+            command=self.on_apply_selected,
+            fg_color="#10b981",
+            hover_color="#059669",
+            width=180,
+        )
+        hint_label = ctk.CTkLabel(
+            bulk_frame,
+            text="建議：先用「加值」小幅調整（+5～+10），避免過度破壞平衡。",
+            wraplength=360,
+            text_color="#9aa4d1",
+            anchor="w",
+            justify="left",
+        )
+
+        mode_label.grid(row=2, column=0, padx=16, pady=(12, 6), sticky="w")
+        mode_menu.grid(row=2, column=1, padx=(0, 16), pady=(12, 6), sticky="w")
+        apply_btn.grid(row=2, column=2, padx=(16, 16), pady=(12, 6), sticky="e")
+        hint_label.grid(row=3, column=0, columnspan=4, padx=16, pady=(6, 16), sticky="w")
+
+    def _build_status_bar(self) -> None:
+        bar = ctk.CTkFrame(self, corner_radius=0, fg_color="#161b2a")
+        bar.grid(row=2, column=0, sticky="ew")
+        label = ctk.CTkLabel(bar, textvariable=self.status_var, text_color="#cbd5ff")
+        label.pack(anchor="w", padx=18, pady=6)
+
+    # ------------------------------------------------------------------
+    # 公用方法
+    def set_status(self, message: str) -> None:
+        self.status_var.set(message)
+
+    def _on_mode_change(self, selection: str) -> None:
+        if "設值" in selection:
+            self.bulk_mode_var.set("set")
+        else:
+            self.bulk_mode_var.set("add")
+
+    def _clear_roster_widgets(self) -> None:
+        for child in self.scroll_frame.winfo_children():
+            child.destroy()
+        self.row_vars.clear()
+        self.row_frames.clear()
+
+    def _create_row(self, position: int, idx: int, summary: Dict[str, object], highlight: bool) -> None:
+        bg_color = MATCH_ROW_COLOR if highlight else (EVEN_ROW_COLOR if position % 2 == 0 else ODD_ROW_COLOR)
+        row_frame = ctk.CTkFrame(
+            self.scroll_frame,
+            fg_color=bg_color,
+            corner_radius=10,
+            border_width=2 if idx in self.selected_indices else 0,
+            border_color=SELECTED_BORDER_COLOR,
+        )
+        row_frame.grid(row=position, column=0, sticky="ew", padx=6, pady=4)
+        for c in range(len(COLUMN_DEFINITIONS) + 1):
+            weight = 1 if c == 5 else 0
+            row_frame.grid_columnconfigure(c, weight=weight)
+
+        var = ctk.BooleanVar(value=(idx in self.selected_indices))
+        self.row_vars[idx] = var
+        self.row_frames[idx] = row_frame
+
+        checkbox = ctk.CTkCheckBox(
+            row_frame,
+            text="",
+            variable=var,
+            command=lambda i=idx: self.on_toggle_select(i),
+            fg_color="#3b82f6",
+            hover_color="#2563eb",
+        )
+        checkbox.grid(row=0, column=0, padx=(12, 8), pady=8)
+
+        values = [
+            idx,
+            summary.get('id'),
+            summary.get('unitId'),
+            summary.get('team'),
+            summary.get('unitname'),
+            summary.get('level'),
+            summary.get('potentialPoint'),
+            summary.get('skillPoint'),
+            summary.get('livingSkillPoint'),
+        ]
+        for col_index, value in enumerate(values, start=1):
+            key, _, width = COLUMN_DEFINITIONS[col_index - 1]
+            text = "" if value is None else str(value)
+            anchor = "w"
+            label = ctk.CTkLabel(
+                row_frame,
+                text=text,
+                width=width,
+                anchor=anchor,
+                text_color="#e5e7ff",
+            )
+            label.grid(row=0, column=col_index, padx=(0, 12), pady=8, sticky="w")
+
+    def on_toggle_select(self, idx: int) -> None:
+        var = self.row_vars.get(idx)
+        if not var:
+            return
+        if var.get():
+            self.selected_indices.add(idx)
+        else:
+            self.selected_indices.discard(idx)
+        frame = self.row_frames.get(idx)
+        if frame:
+            frame.configure(border_width=2 if idx in self.selected_indices else 0)
+        self.set_status(f"已選取 {len(self.selected_indices)} 名角色")
+
+    # ------------------------------------------------------------------
+    # 事件
     def on_open(self):
         path = filedialog.askopenfilename(
             title="選取 Blackthorn 存檔（JSON）",
@@ -354,8 +591,10 @@ class App(tk.Tk):
         try:
             out = self.model.save(make_backup=True)
             messagebox.showinfo(APP_TITLE, f"已儲存：\n{out}\n（已在原檔旁建立備份）")
+            self.set_status("存檔已儲存並備份")
         except Exception as e:
             messagebox.showerror(APP_TITLE, f"儲存失敗：\n{e}")
+            self.set_status("儲存失敗")
 
     def on_save_as(self):
         if not self.model.data:
@@ -371,11 +610,10 @@ class App(tk.Tk):
             try:
                 out = self.model.save(out_path=path, make_backup=True)
                 messagebox.showinfo(APP_TITLE, f"已儲存：\n{out}\n（原檔已備份）")
+                self.set_status("另存新檔成功")
             except Exception as e:
                 messagebox.showerror(APP_TITLE, f"儲存失敗：\n{e}")
-
-    def on_quit(self):
-        self.destroy()
+                self.set_status("另存失敗")
 
     def on_about(self):
         messagebox.showinfo(APP_TITLE, "繁中介面存檔修改器（JSON）。\n提示：預設僅顯示玩家隊伍 team=0，可切換為顯示全部 NPC。")
@@ -389,19 +627,17 @@ class App(tk.Tk):
         self.rep_var.set(str(self.model.get_rep()))
         self.refresh_table()
         self.title(f"{APP_TITLE} — {os.path.basename(path)}")
+        self.set_status(f"已載入：{path}")
 
     def refresh_table(self):
-        # 清空表格
-        for i in self.tree.get_children():
-            self.tree.delete(i)
+        self._clear_roster_widgets()
 
         only_team = self.model.player_team if self.show_only_player_var.get() else None
         search = self.search_var.get().strip().lower()
         minlvl = safe_int(self.filter_min_level_var.get(), 0) or 0
         only_us = self.only_underscore_var.get()
 
-        # 準備資料
-        rows = []
+        rows: List[Tuple[int, Dict[str, object]]] = []
         for idx, npc in self.model.iter_roster(only_team=only_team):
             s = self.model.npc_summary(npc)
             name = str(s.get('unitname') or "")
@@ -414,44 +650,31 @@ class App(tk.Tk):
                 continue
             rows.append((idx, s))
 
-        # 排序（如有指定）
         if self.sort_column:
             key = self.sort_column
+
             def kfunc(item):
                 s = item[1]
                 v = s.get(key)
-                # 字串/數字混用處理
                 try:
                     return (0, int(v))
                 except Exception:
                     return (1, str(v))
+
             rows.sort(key=kfunc, reverse=self.sort_reverse)
         else:
-            # 預設：team asc, level desc, name asc
             rows.sort(key=lambda item: (item[1].get('team', 0), -(item[1].get('level') or 0), str(item[1].get('unitname') or "")))
 
-        # 插入（斑馬紋 / 關鍵字高亮）
-        even_bg = self.tag_colors["even"]
-        odd_bg = self.tag_colors["odd"]
-        match_bg = self.tag_colors["match"]
+        self.current_rows = rows
+        valid_indices = {idx for idx, _ in rows}
+        self.selected_indices.intersection_update(valid_indices)
 
-        for n, (idx, s) in enumerate(rows):
-            name = str(s.get('unitname') or "")
-            values = (
-                idx, s.get('id'), s.get('unitId'), s.get('team'),
-                name, s.get('level'), s.get('potentialPoint'), s.get('skillPoint'),
-                s.get('livingSkillPoint')
-            )
-            tag = "even" if n % 2 == 0 else "odd"
-            tags = (tag,)
-            if self.search_var.get().strip() and self.search_var.get().strip().lower() in name.lower():
-                tags = tags + ("match",)
-            self.tree.insert("", "end", iid=str(idx), values=values, tags=tags)
+        for position, (idx, summary) in enumerate(rows):
+            name = str(summary.get('unitname') or "")
+            highlight = bool(search and search in name.lower())
+            self._create_row(position, idx, summary, highlight)
 
-        # 標籤顏色
-        self.tree.tag_configure("even", background=even_bg)
-        self.tree.tag_configure("odd", background=odd_bg)
-        self.tree.tag_configure("match", background=match_bg)
+        self.set_status(f"顯示 {len(rows)} 名角色，已選取 {len(self.selected_indices)} 名")
 
     def on_update_meta(self):
         if not self.model.data:
@@ -460,14 +683,14 @@ class App(tk.Tk):
         self.model.set_gold(self.gold_var.get())
         self.model.set_rep(self.rep_var.get())
         messagebox.showinfo(APP_TITLE, "已更新全局屬性（暫存於記憶體）。請至【檔案→儲存】寫回。")
+        self.set_status("已更新全局屬性")
 
     def on_apply_selected(self):
         if not self.model.data:
             messagebox.showwarning(APP_TITLE, "請先載入存檔。")
             return
-        sel = self.tree.selection()
-        if not sel:
-            messagebox.showwarning(APP_TITLE, "請先在表格中選取至少一名角色。")
+        if not self.selected_indices:
+            messagebox.showwarning(APP_TITLE, "請先在清單中選取至少一名角色。")
             return
 
         fields = []
@@ -498,8 +721,7 @@ class App(tk.Tk):
 
         mode = self.bulk_mode_var.get()  # add / set
         count = 0
-        for iid in sel:
-            idx = int(iid)
+        for idx in sorted(self.selected_indices):
             if idx < 0 or idx >= len(self.model.npcs):
                 continue
             npc = self.model.npcs[idx]
@@ -516,6 +738,7 @@ class App(tk.Tk):
 
         self.refresh_table()
         messagebox.showinfo(APP_TITLE, f"已套用至 {count} 名角色。請至【檔案→儲存】寫回。")
+        self.set_status(f"批次套用完成，共 {count} 名")
 
     def on_sort_column(self, col):
         if self.sort_column == col:
@@ -525,9 +748,11 @@ class App(tk.Tk):
             self.sort_reverse = False
         self.refresh_table()
 
+
 def main():
     app = App()
     app.mainloop()
+
 
 if __name__ == "__main__":
     main()
