@@ -30,7 +30,7 @@ import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-from ui_style import init_style, apply_palette as style_apply_palette, card as style_card
+from ui_style_apple import init_style, apply_palette as style_apply_palette, card as style_card
 
 APP_TITLE = "Blackthorn Arena: Reforged - Save Editor (JSON)"
 DEFAULT_FILENAME = "sav.dat"
