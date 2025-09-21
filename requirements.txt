@@ -1,3 +1,6 @@
 # 主要依賴全為 Python 標準函式庫（tkinter、json…）
 # Windows / macOS 一般不需額外安裝。
 # 若在 Linux 沒有 tkinter，請安裝系統套件（例如：sudo apt-get install python3-tk）。
+
+# GUI 版本（CustomTkinter）需另外安裝：
+customtkinter>=5.2
